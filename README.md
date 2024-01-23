@@ -24,10 +24,10 @@ append initrd=/bzroot acpi_enforce_resources=lax
 Set the PWM headers you want to control to 100%/255 and mode to PWM in your BIOS.
 
 
-## Usage Tips
-To identify fan headers, use the command sensors -uA.
-Utilize pwmconfig to find the correct fan header.
-Test PWM pins from the terminal using attributes like pwm[1-5], pwm[1-5]_enable, and pwm[1-5]_mode.
+## Identify fan headers
+* To identify fan headers, use the command `sensors -uA`.
+* Utilize `pwmconfig` to find the correct fan header.
+* Test PWM pins from the terminal using attributes like pwm[1-5], pwm[1-5]_enable, and pwm[1-5]_mode.
 
 
 ## Usage:

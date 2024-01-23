@@ -7,6 +7,9 @@
 This Bash script enables automatic adjustment of fan speed in Unraid based on the temperature of your hard drives in the array. You can customize the disks to include or exclude, as well as adjust temperature settings for different fan control scenarios.
 
 
+![Screenshot from User Scripts](extras/user_scripts.png)
+
+
 ## Prerequisites
 
 Before using this script, make sure you have completed the following steps:

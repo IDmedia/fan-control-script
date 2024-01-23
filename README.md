@@ -23,6 +23,8 @@ append initrd=/bzroot acpi_enforce_resources=lax
 2. Set BIOS Settings:
 Set the PWM headers you want to control to 100%/255 and mode to PWM in your BIOS.
 
+(Optional) I recommend installing the `Dynamix System Temperature` plugin to easily monitor your fans' speed on the dashboard.
+
 
 ## Identify fan headers
 * To identify fan headers, use the command `sensors -uA`.

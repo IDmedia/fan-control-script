@@ -60,4 +60,8 @@ Adjust the following parameters in the script according to your preferences:
 If a disk exceeds the `MAX_TEMP` threshold, an alert is sent through Unraid's notification system.
 
 
+## Inter-tech/Norco Case Owners
+I suggest reviewing this informative blog post: [The mysterious 6-pin fan header on my Inter-Tech server cases](https://blog.cavelab.dev/2021/03/inter-tech-case-fan-header/). It provides valuable insights into effectively controlling the three large array fans.
+
+
 ### Feel free to contribute, report issues, or suggest improvements! If you find this repository useful, don't forget to star it :)

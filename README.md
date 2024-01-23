@@ -39,6 +39,8 @@ Utilize the `User Scripts` plugin to set up a new script.
 * Schedule: Custom -> `*/5 * * * *`
 * Script: Contents of fan_speed_control.sh
 
+The script dynamically optimizes fan speed based on disk temperatures, executing this process every 5 minutes. When manually executed, it offers informative messages about the current state and the actions taken. In case of unexpected conditions, it sets the fan speed to the maximum.
+
 
 # Configuration
 
@@ -53,16 +55,6 @@ Adjust the following parameters in the script according to your preferences:
 `EXCLUDE_DISK_BY_NAME`: Exclude disks by name.  
 `ARRAY_FANS`: Define fan control locations.  
 
-
-## Execution
-Run the script, and it will dynamically adjust the fan speed based on disk temperatures.
-
-```
-./fan_control_script.sh
-```
-The script provides informative messages about the current state and the action taken.
-
-For any unexpected conditions, it sets the fan speed to the maximum.
 
 ## Notifications
 If a disk exceeds the `MAX_TEMP` threshold, an alert is sent through Unraid's notification system.

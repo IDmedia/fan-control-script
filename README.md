@@ -3,15 +3,15 @@
 </div>
 
 
-# unRAID Fan Control Script
-This Bash script enables automatic adjustment of fan speed in unRAID based on the temperature of your hard drives in the array. You can customize the disks to include or exclude, as well as adjust temperature settings for different fan control scenarios.
+# Unraid Fan Control Script
+This Bash script enables automatic adjustment of fan speed in Unraid based on the temperature of your hard drives in the array. You can customize the disks to include or exclude, as well as adjust temperature settings for different fan control scenarios.
 
 
 ## Prerequisites
 
 Before using this script, make sure you have completed the following steps:
 
-1. Enable Manual Fan Speed Control in unRAID:
+1. Enable Manual Fan Speed Control in Unraid:
 Edit the "/boot/syslinux/syslinux.cfg" file and change the line:
 ```
 append initrd=/bzroot
@@ -57,7 +57,7 @@ Adjust the following parameters in the script according to your preferences:
 
 
 ## Notifications
-If a disk exceeds the `MAX_TEMP` threshold, an alert is sent through unRAID's notification system.
+If a disk exceeds the `MAX_TEMP` threshold, an alert is sent through Unraid's notification system.
 
 
 ### Feel free to contribute, report issues, or suggest improvements! If you find this repository useful, don't forget to star it :)

@@ -29,6 +29,10 @@
 #   * 0 DC output
 #   * 1 PWM output
 
+# Create a fan curve graph
+# Requires gnuplot (use on another Linux machine)
+# Run with: ./fan_speed_control.sh --generate-graph-data
+
 # Idle PWM value
 # Used when all disks are spun down
 # and fan speed will never be set to a lower value
@@ -73,11 +77,87 @@ EXCLUDE_DISK_BY_NAME=(
 # Define one or more fans that should be controlled by this script
 ARRAY_FANS=(
 	"/sys/class/hwmon/hwmon4/pwm1"
-	"/sys/class/hwmon/hwmon4/pwm5"
+	"/sys/class/hwmon/hwmon4/pwm4"
 )
 
 ############################################################
 
+generate_graph_data=false
+
+# Function to round a number to the nearest lower ten
+round_down_to_nearest_ten() {
+    echo $(( $1 - ($1 % 10) ))
+}
+
+# Function to round a number to the nearest higher ten
+round_up_to_nearest_ten() {
+    local num=$1
+    echo $(( ((num + 9) / 10) * 10 ))
+}
+
+# Parse command-line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --generate-graph-data) generate_graph_data=true ;;
+        --output-file) graph_image_file="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+if $generate_graph_data; then
+    rounded_low_temp=$(round_down_to_nearest_ten $LOW_TEMP)
+    rounded_max_temp=$(round_up_to_nearest_ten $MAX_TEMP)
+    data_file=$(mktemp)
+
+    min_pwm=$MAX_PWM
+    max_pwm=0
+
+    # Generate data points for the graph
+    for temp in $(seq $rounded_low_temp $rounded_max_temp); do
+        # Calculate fan speed based on temperature
+        if (( temp <= LOW_TEMP )); then
+            fan_pwm=$IDLE_PWM
+        elif (( temp > LOW_TEMP && temp <= HIGH_TEMP )); then
+            pwm_steps=$((HIGH_TEMP - LOW_TEMP - 1))
+            pwm_increment=$(( (HIGH_PWM - LOW_PWM) / pwm_steps ))
+            fan_pwm=$(( ((temp - LOW_TEMP - 1) * pwm_increment) + LOW_PWM ))
+        elif (( temp > HIGH_TEMP && temp <= MAX_TEMP )); then
+            fan_pwm=$MAX_PWM
+        else
+            fan_pwm=$MAX_PWM
+        fi
+        echo "$temp $fan_pwm" >> $data_file
+        (( fan_pwm < min_pwm )) && min_pwm=$fan_pwm
+        (( fan_pwm > max_pwm )) && max_pwm=$fan_pwm
+    done
+
+    # Create gnuplot script
+	graph_image_file="fan_speed_control_graph.jpg"
+    gnuplot_script=$(mktemp)
+    cat << EOF > $gnuplot_script
+set terminal jpeg size 1200,800 enhanced
+set output "$graph_image_file"
+set xlabel "Temperature (°C)"
+set ylabel "Fan PWM"
+set title "Fan PWM vs Temperature"
+set grid
+set key left top
+set xrange [$rounded_low_temp:$rounded_max_temp]
+set yrange [$min_pwm:$max_pwm]
+set xtics 1
+set ytics 10
+plot '$data_file' using 1:2 with linespoints title "Fan Speed"
+EOF
+
+    # Run gnuplot with the created script
+    gnuplot $gnuplot_script
+
+    # Clean up
+    rm $data_file $gnuplot_script
+    echo "Graph image generated in $graph_image_file"
+    exit 0
+fi
 
 # Make a list of disk types the user wants to monitor
 declare -A include_disk_types

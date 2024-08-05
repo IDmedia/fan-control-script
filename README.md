@@ -61,6 +61,17 @@ Adjust the following parameters in the script according to your preferences:
 `ARRAY_FANS`: Define fan control locations.  
 
 
+# Graph the Fan Curve
+
+![Fan Curve Screenshot](extras/fan_speed_graph.png)
+
+To generate a graphical representation of the fan curve, use the following command to create an image that plots temperature against PWM value. Note that `gnuplot` must be installed, which is not available on UnRAID, so run this command from another Linux machine:
+
+```
+./fan_speed_control.sh --generate-graph-data --output-file fan_speed_graph.png
+```
+
+
 ## Notifications
 If a disk exceeds the `MAX_TEMP` threshold, an alert is sent through Unraid's notification system.
 

@@ -31,7 +31,7 @@
 
 # Create a fan curve graph
 # Requires gnuplot (use on another Linux machine)
-# Run with: ./fan_speed_control.sh --generate-graph-data
+# Run with: ./fan_speed_control.sh --generate-graph-data --output-file fan_speed_graph.jpg
 
 # Idle PWM value
 # Used when all disks are spun down
@@ -142,7 +142,7 @@ if $generate_graph_data; then
     done
 
     # Create gnuplot script
-	graph_image_file="fan_speed_control_graph.jpg"
+	graph_image_file="fan_speed_graph.jpg"
     gnuplot_script=$(mktemp)
     cat << EOF > $gnuplot_script
 set terminal jpeg size 1200,800 enhanced

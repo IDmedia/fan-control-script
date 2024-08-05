@@ -98,9 +98,18 @@ round_up_to_nearest_ten() {
 # Parse command-line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --generate-graph-data) generate_graph_data=true ;;
-        --output-file) graph_image_file="$2"; shift ;;
-        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+        --generate-graph-data)
+            generate_graph_data=true
+            ;;
+        --output-file)
+            if [[ -n "$2" ]]; then
+                graph_image_file="$2"
+                shift
+            else
+                echo "Error: --output-file requires a non-empty argument."
+                exit 1
+            fi
+            ;;
     esac
     shift
 done

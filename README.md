@@ -51,7 +51,7 @@ The script dynamically optimizes fan speed based on disk temperatures, executing
 
 Adjust the following parameters in the script according to your preferences:
 
-`MIN_PWM`: Minimum PWM value when all disks are spun down.  
+`IDLE_PWM`: PWM value when all disks are spun down.  
 `LOW_PWM` and `HIGH_PWM`: PWM values for calculating new values between LOW_TEMP and HIGH_TEMP temperatures.  
 `MAX_PWM`: Maximum PWM value for setting the fan to max speed during parity or high disk temperatures.  
 `LOW_TEMP` and `HIGH_TEMP`: Temperature range for automatic fan adjustment.  

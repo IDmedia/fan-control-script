@@ -29,10 +29,10 @@
 #   * 0 DC output
 #   * 1 PWM output
 
-# Minimum PWM value
+# Idle PWM value
 # Used when all disks are spun down
 # and fan speed will never be set to a lower value
-MIN_PWM=180
+IDLE_PWM=180
 
 # Low/High PWM values
 # Used for calculating new PWM values when
@@ -189,19 +189,19 @@ then
 elif [[ $disk_active_num -eq 0 ]]
 then
     fan_msg="All disks are in standby mode"
-	fan_pwm=$MIN_PWM
+	fan_pwm=$IDLE_PWM
 
 # Hottest disk is below the LOW_TEMP threshold
 elif (( $disk_max_temp_value <= $LOW_TEMP ))
 then
 	fan_msg="Temperature of $disk_max_temp_value°C is below LOW_TEMP ($LOW_TEMP°C)"
-	fan_pwm=$MIN_PWM
+	fan_pwm=$IDLE_PWM
 
 # Hottest disk is between LOW_TEMP and HIGH_TEMP
 elif (( $disk_max_temp_value > $LOW_TEMP && $disk_max_temp_value <= $HIGH_TEMP ))
 then
     fan_msg="Temperature of $disk_max_temp_value°C is between LOW_TEMP ($LOW_TEMP°C) and HIGH_TEMP ($HIGH_TEMP°C)"
-	fan_pwm=$(( ((disk_max_temp_value - LOW_TEMP - 1) * pwm_increment) + MIN_PWM ))
+	fan_pwm=$(( ((disk_max_temp_value - LOW_TEMP - 1) * pwm_increment) + LOW_PWM ))
 
 # Hottest disk is between HIGH_TEMP and MAX_TEMP
 elif (( $disk_max_temp_value > $HIGH_TEMP && $disk_max_temp_value <= $MAX_TEMP ))

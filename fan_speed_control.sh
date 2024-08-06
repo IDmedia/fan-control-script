@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Automatically adjusts fan speed based on hard drive temperatures
-# Customize disk inclusion/exclusion and temperature settings
 
 # Prerequisites:
 # 1. Enable manual fan speed control in Unraid
@@ -59,15 +58,14 @@ EXCLUDE_DISK_BY_NAME=(
 
 # Array fans to be controlled by this script
 ARRAY_FANS=(
-	"/sys/class/hwmon/hwmon4/pwm1"
-	"/sys/class/hwmon/hwmon4/pwm4"
+    "/sys/class/hwmon/hwmon4/pwm1"
+    "/sys/class/hwmon/hwmon4/pwm4"
 )
 
 ############################################################
 
-generate_graph_data=false
-
 # Parse command-line arguments
+generate_graph_data=false
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --generate-graph-data)
@@ -86,6 +84,34 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+
+# Function to check if a file exists
+check_file_exists() {
+    local file_path=$1
+    if [[ ! -f $file_path ]]; then
+        echo "Error: $file_path does not exist."
+        exit 1
+    fi
+}
+
+# Function to calculate fan PWM based on temperature
+calculate_fan_pwm() {
+    local temp=$1
+    local fan_pwm
+
+    if (( temp <= LOW_TEMP )); then
+        fan_pwm=$MIN_PWM
+    elif (( temp > LOW_TEMP && temp <= HIGH_TEMP )); then
+        pwm_steps=$((HIGH_TEMP - LOW_TEMP))
+        pwm_increment=$(( (MAX_PWM - MIN_PWM) / pwm_steps ))
+        fan_pwm=$(( ((temp - LOW_TEMP) * pwm_increment) + MIN_PWM ))
+    else
+        fan_pwm=$MAX_PWM
+    fi
+
+    echo $fan_pwm
+}
+
 if $generate_graph_data; then
     padded_low_temp=$((LOW_TEMP - 5))
     padded_high_temp=$((HIGH_TEMP + 5))
@@ -96,22 +122,17 @@ if $generate_graph_data; then
 
     # Generate data points for the graph
     for temp in $(seq $padded_low_temp $padded_high_temp); do
-        # Calculate fan speed based on temperature
-        if (( temp <= LOW_TEMP )); then
-            fan_pwm=$MIN_PWM
-        elif (( temp > LOW_TEMP && temp <= HIGH_TEMP )); then
-            pwm_steps=$((HIGH_TEMP - LOW_TEMP - 1))
-            pwm_increment=$(( (MAX_PWM - MIN_PWM) / pwm_steps ))
-            fan_pwm=$(( ((temp - LOW_TEMP - 1) * pwm_increment) + MIN_PWM ))
-        elif (( temp > HIGH_TEMP && temp <= HIGH_TEMP )); then
-            fan_pwm=$MAX_PWM
-        else
-            fan_pwm=$MAX_PWM
-        fi
+        fan_pwm=$(calculate_fan_pwm $temp)
         echo "$temp $fan_pwm" >> $data_file
         (( fan_pwm < min_pwm )) && min_pwm=$fan_pwm
         (( fan_pwm > max_pwm )) && max_pwm=$fan_pwm
     done
+
+    # Check if gnuplot is available
+    if ! command -v gnuplot &> /dev/null; then
+        echo "gnuplot is not installed. Please install gnuplot and try again."
+        exit 1
+    fi
 
     # Create gnuplot script
     graph_image_file="fan_speed_graph.png"
@@ -139,6 +160,10 @@ EOF
     echo "Graph image generated in $graph_image_file"
     exit 0
 fi
+
+# Check for the existence of required files
+check_file_exists "/var/local/emhttp/disks.ini"
+check_file_exists "/var/local/emhttp/var.ini"
 
 # Make a list of disk types the user wants to monitor
 declare -A include_disk_types
@@ -220,7 +245,6 @@ do
     fi
 done
 
-
 # Check if parity is running
 disk_parity=$(awk -F'=' '$1=="mdResync" {gsub(/"/, "", $2); print $2}' /var/local/emhttp/var.ini)
 
@@ -262,7 +286,7 @@ then
 elif (( $disk_max_temp_value > $LOW_TEMP && $disk_max_temp_value <= $HIGH_TEMP ))
 then
     fan_msg="Temperature of $disk_max_temp_value°C is between LOW_TEMP ($LOW_TEMP°C) and HIGH_TEMP ($HIGH_TEMP°C)"
-    fan_pwm=$(( ((disk_max_temp_value - LOW_TEMP - 1) * pwm_increment) + MIN_PWM ))
+    fan_pwm=$(calculate_fan_pwm $disk_max_temp_value)
 
 # Hottest disk is between HIGH_TEMP and HIGH_TEMP
 elif (( $disk_max_temp_value > $HIGH_TEMP && $disk_max_temp_value <= $HIGH_TEMP ))
@@ -308,5 +332,5 @@ do
     echo $fan_pwm > $fan
 done
 
-pwm_percent=$(( (fan_pwm * 100) / 255 ))
+pwm_percent=$(( (fan_pwm * 100) / $MAX_PWM ))
 echo "$fan_msg, setting fans to $fan_pwm PWM ($pwm_percent%)"

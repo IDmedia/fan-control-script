@@ -36,11 +36,11 @@
 MAX_PWM=255
 
 # Minimum PWM value for fan speed
-MIN_PWM=180
+MIN_PWM=170
 
 # Disk temperature range for dynamic fan speed adjustment
 LOW_TEMP=35
-HIGH_TEMP=45
+HIGH_TEMP=48
 
 # Maximum allowable disk temperature
 # A notification will be sent through UnRAID if this is exceeded

@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# This script will automatically adjust the fans speed
-# based on your hard drives temperature. You may select
-# which disks to include and exclude and play around with
-# different temperature settings.
+# Automatically adjusts fan speed based on hard drive temperatures
+# Customize disk inclusion/exclusion and temperature settings
 
 # Prerequisites:
 # 1. Enable manual fan speed control in Unraid
@@ -29,41 +27,27 @@
 #   * 0 DC output
 #   * 1 PWM output
 
-# Create a fan curve graph
-# Requires gnuplot (use on another Linux machine)
-# Run with: ./fan_speed_control.sh --generate-graph-data --output-file fan_speed_graph.png
+# Generate a fan curve graph (requires gnuplot)
+# Run on another Linux machine with: ./fan_speed_control.sh --generate-graph-data
 
-# Idle PWM value
-# Used when all disks are spun down
-# and fan speed will never be set to a lower value
-IDLE_PWM=180
-
-# Low/High PWM values
-# Used for calculating new PWM values when
-# disk temp is between LOW_TEMP and HIGH_TEMP temperature
-LOW_PWM=170
-HIGH_PWM=225
-
-# Max PWM
-# Used for setting the fan to max speed while parity
-# is running or if the disk temperature is too hot
-# This settings should in most cases NOT BE CHANGED!
+# Maximum PWM value for fan speed
+# Applied when parity is running or disk temperature is too high
+# WARNING: Altering this value is generally not recommended
 MAX_PWM=255
 
-# Low/High temperature
-# Define the disks temperature range for when
-# the fans speed should be automatically adjusted
+# Minimum PWM value for fan speed
+MIN_PWM=180
+
+# Disk temperature range for dynamic fan speed adjustment
 LOW_TEMP=35
 HIGH_TEMP=45
 
-# Max temperature
-# If the hottest disk reaches this temperature
-# a notification will be sent through Unraid
-MAX_TEMP=50
+# Maximum allowable disk temperature
+# A notification will be sent through UnRAID if this is exceeded
+ALERT_TEMP=50
 
 # Disks to monitor
-# Select disks to include by type and
-# exclude by name (found in disk.ini)
+# Include disks by type and exclude by name (specified in disk.ini)
 INCLUDE_DISK_TYPE_PARITY=1
 INCLUDE_DISK_TYPE_DATA=1
 INCLUDE_DISK_TYPE_CACHE=1
@@ -73,8 +57,7 @@ EXCLUDE_DISK_BY_NAME=(
     "cache_system2"
 )
 
-# Array fans
-# Define one or more fans that should be controlled by this script
+# Array fans to be controlled by this script
 ARRAY_FANS=(
 	"/sys/class/hwmon/hwmon4/pwm1"
 	"/sys/class/hwmon/hwmon4/pwm4"
@@ -83,17 +66,6 @@ ARRAY_FANS=(
 ############################################################
 
 generate_graph_data=false
-
-# Function to round a number to the nearest lower ten
-round_down_to_nearest_ten() {
-    echo $(( $1 - ($1 % 10) ))
-}
-
-# Function to round a number to the nearest higher ten
-round_up_to_nearest_ten() {
-    local num=$1
-    echo $(( ((num + 9) / 10) * 10 ))
-}
 
 # Parse command-line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -115,23 +87,23 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if $generate_graph_data; then
-    rounded_low_temp=$(round_down_to_nearest_ten $LOW_TEMP)
-    rounded_max_temp=$(round_up_to_nearest_ten $MAX_TEMP)
+    padded_low_temp=$((LOW_TEMP - 5))
+    padded_high_temp=$((HIGH_TEMP + 5))
     data_file=$(mktemp)
 
     min_pwm=$MAX_PWM
     max_pwm=0
 
     # Generate data points for the graph
-    for temp in $(seq $rounded_low_temp $rounded_max_temp); do
+    for temp in $(seq $padded_low_temp $padded_high_temp); do
         # Calculate fan speed based on temperature
         if (( temp <= LOW_TEMP )); then
-            fan_pwm=$IDLE_PWM
+            fan_pwm=$MIN_PWM
         elif (( temp > LOW_TEMP && temp <= HIGH_TEMP )); then
             pwm_steps=$((HIGH_TEMP - LOW_TEMP - 1))
-            pwm_increment=$(( (HIGH_PWM - LOW_PWM) / pwm_steps ))
-            fan_pwm=$(( ((temp - LOW_TEMP - 1) * pwm_increment) + LOW_PWM ))
-        elif (( temp > HIGH_TEMP && temp <= MAX_TEMP )); then
+            pwm_increment=$(( (MAX_PWM - MIN_PWM) / pwm_steps ))
+            fan_pwm=$(( ((temp - LOW_TEMP - 1) * pwm_increment) + MIN_PWM ))
+        elif (( temp > HIGH_TEMP && temp <= HIGH_TEMP )); then
             fan_pwm=$MAX_PWM
         else
             fan_pwm=$MAX_PWM
@@ -152,8 +124,8 @@ set ylabel "Fan PWM"
 set title "Fan PWM vs Temperature"
 set grid
 set key left top
-set xrange [$rounded_low_temp:$rounded_max_temp]
-set yrange [$min_pwm:$max_pwm]
+set xrange [$padded_low_temp:$padded_high_temp]
+set yrange [$min_pwm:260]
 set xtics 1
 set ytics 10
 plot '$data_file' using 1:2 with linespoints title "Fan Speed"
@@ -254,7 +226,7 @@ disk_parity=$(awk -F'=' '$1=="mdResync" {gsub(/"/, "", $2); print $2}' /var/loca
 
 # Linear PWM Logic
 pwm_steps=$((HIGH_TEMP - LOW_TEMP - 1))
-pwm_increment=$(( (HIGH_PWM - LOW_PWM) / pwm_steps))
+pwm_increment=$(( (MAX_PWM - MIN_PWM) / pwm_steps))
 
 # Print heighest disk temp if at least one is active
 if [[ $disk_active_num -gt 0 ]]; then
@@ -278,33 +250,39 @@ then
 elif [[ $disk_active_num -eq 0 ]]
 then
     fan_msg="All disks are in standby mode"
-	fan_pwm=$IDLE_PWM
+    fan_pwm=$MIN_PWM
 
 # Hottest disk is below the LOW_TEMP threshold
 elif (( $disk_max_temp_value <= $LOW_TEMP ))
 then
-	fan_msg="Temperature of $disk_max_temp_value°C is below LOW_TEMP ($LOW_TEMP°C)"
-	fan_pwm=$IDLE_PWM
+    fan_msg="Temperature of $disk_max_temp_value°C is below LOW_TEMP ($LOW_TEMP°C)"
+    fan_pwm=$MIN_PWM
 
 # Hottest disk is between LOW_TEMP and HIGH_TEMP
 elif (( $disk_max_temp_value > $LOW_TEMP && $disk_max_temp_value <= $HIGH_TEMP ))
 then
     fan_msg="Temperature of $disk_max_temp_value°C is between LOW_TEMP ($LOW_TEMP°C) and HIGH_TEMP ($HIGH_TEMP°C)"
-	fan_pwm=$(( ((disk_max_temp_value - LOW_TEMP - 1) * pwm_increment) + LOW_PWM ))
+    fan_pwm=$(( ((disk_max_temp_value - LOW_TEMP - 1) * pwm_increment) + MIN_PWM ))
 
-# Hottest disk is between HIGH_TEMP and MAX_TEMP
-elif (( $disk_max_temp_value > $HIGH_TEMP && $disk_max_temp_value <= $MAX_TEMP ))
+# Hottest disk is between HIGH_TEMP and HIGH_TEMP
+elif (( $disk_max_temp_value > $HIGH_TEMP && $disk_max_temp_value <= $HIGH_TEMP ))
 then
-    fan_msg="Temperature of $disk_max_temp_value°C is between HIGH_TEMP ($HIGH_TEMP°C) and MAX_TEMP ($MAX_TEMP°C)"
-	fan_pwm=$MAX_PWM
+    fan_msg="Temperature of $disk_max_temp_value°C is between HIGH_TEMP ($HIGH_TEMP°C) and HIGH_TEMP ($HIGH_TEMP°C)"
+    fan_pwm=$MAX_PWM
 
-# Hottest disk exceeds MAX_TEMP
-elif (( $disk_max_temp_value > $MAX_TEMP ))
+# Hottest disk is below the LOW_TEMP threshold
+elif (( $disk_max_temp_value > $HIGH_TEMP ))
 then
-    alert_msg="$disk_max_temp_name exceeds ($MAX_TEMP°C)"
+    fan_msg="Temperature of $disk_max_temp_value°C is above HIGH_TEMP ($HIGH_TEMP°C)"
+    fan_pwm=$MAX_PWM
+
+# Hottest disk exceeds ALERT_TEMP
+elif (( $disk_max_temp_value > $ALERT_TEMP ))
+then
+    alert_msg="$disk_max_temp_name exceeds ($ALERT_TEMP°C)"
     fan_msg=$alert_msg
     fan_pwm=$MAX_PWM
-    
+
     # Send an alert
     /usr/local/emhttp/webGui/scripts/notify \
         -i alert \
@@ -325,7 +303,7 @@ do
     if [[ $pwm_mode -ne 1 ]]; then
         echo 1 > "${fan}_enable"
     fi
-    
+
     # Set fan speed
     echo $fan_pwm > $fan
 done

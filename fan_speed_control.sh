@@ -41,10 +41,6 @@ MIN_PWM=170
 LOW_TEMP=35
 HIGH_TEMP=48
 
-# Maximum allowable disk temperature
-# A notification will be sent through UnRAID if this is exceeded
-ALERT_TEMP=50
-
 # Disks to monitor
 # Include disks by type and exclude by name (specified in disk.ini)
 INCLUDE_DISK_TYPE_PARITY=1
@@ -299,19 +295,6 @@ elif (( $disk_max_temp_value > $HIGH_TEMP ))
 then
     fan_msg="Temperature of $disk_max_temp_value°C is above HIGH_TEMP ($HIGH_TEMP°C)"
     fan_pwm=$MAX_PWM
-
-# Hottest disk exceeds ALERT_TEMP
-elif (( $disk_max_temp_value > $ALERT_TEMP ))
-then
-    alert_msg="$disk_max_temp_name exceeds ($ALERT_TEMP°C)"
-    fan_msg=$alert_msg
-    fan_pwm=$MAX_PWM
-
-    # Send an alert
-    /usr/local/emhttp/webGui/scripts/notify \
-        -i alert \
-        -s "Disk (${disk_max_temp_name}) overheated" \
-        -d "$alert_msg"
 
 # Handle any unexpected condition
 else

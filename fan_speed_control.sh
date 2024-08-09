@@ -47,6 +47,8 @@ INCLUDE_DISK_TYPE_PARITY=1
 INCLUDE_DISK_TYPE_DATA=1
 INCLUDE_DISK_TYPE_CACHE=1
 INCLUDE_DISK_TYPE_FLASH=0
+INCLUDE_DISK_TYPE_UNASSIGNED=1
+
 EXCLUDE_DISK_BY_NAME=(
     "cache_system"
     "cache_system2"
@@ -167,26 +169,37 @@ include_disk_types[Parity]=$INCLUDE_DISK_TYPE_PARITY
 include_disk_types[Data]=$INCLUDE_DISK_TYPE_DATA
 include_disk_types[Cache]=$INCLUDE_DISK_TYPE_CACHE
 include_disk_types[Flash]=$INCLUDE_DISK_TYPE_FLASH
+include_disk_types[Unassigned]=$INCLUDE_DISK_TYPE_UNASSIGNED
 
 # Make a list of all the existing disks
 declare -a disk_list_all
-while IFS='= ' read var val
-do
-    if [[ $var == \[*] ]]
-    then
+while IFS='= ' read var val; do
+    if [[ $var == \[*] ]]; then
         disk_name=${var:2:-2}
         disk_list_all+=($disk_name)
         eval declare -A ${disk_name}_data
-    elif [[ $val ]]
-    then
+    elif [[ $val ]]; then
         eval ${disk_name}_data[$var]=$val
     fi
 done < /var/local/emhttp/disks.ini
 
+# Check if /usr/local/emhttp/state/devs.ini exists and parse it
+if [[ -f /usr/local/emhttp/state/devs.ini ]]; then
+    while IFS='= ' read var val; do
+        if [[ $var == \[*] ]]; then
+            disk_name=${var:2:-2}
+            disk_list_all+=($disk_name)
+            eval declare -A ${disk_name}_data
+            eval ${disk_name}_data[type]="Unassigned"
+        elif [[ $val ]]; then
+            eval ${disk_name}_data[$var]=$val
+        fi
+    done < /usr/local/emhttp/state/devs.ini
+fi
+
 # Filter disk list based on criteria
 declare -a disk_list
-for disk in "${disk_list_all[@]}"
-do
+for disk in "${disk_list_all[@]}"; do
     disk_name=${disk}_data[name]
     disk_type=${disk}_data[type]
     disk_id=${disk}_data[id]
@@ -194,8 +207,7 @@ do
 
     if [[ ! -z "${!disk_id}" ]] && \
        [[ "${disk_type_filter}" -ne 0 ]] && \
-       [[ ! " ${EXCLUDE_DISK_BY_NAME[*]} " =~ " ${disk} " ]]
-    then
+       [[ ! " ${EXCLUDE_DISK_BY_NAME[*]} " =~ " ${disk} " ]]; then
         disk_list+=($disk)
     fi
 done

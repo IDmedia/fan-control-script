@@ -49,6 +49,15 @@ INCLUDE_DISK_TYPE_CACHE=1
 INCLUDE_DISK_TYPE_FLASH=0
 INCLUDE_DISK_TYPE_UNASSIGNED=1
 
+# Set verbose mode
+# Log size may increase significantly
+# Usage is recommended only when debugging
+VERBOSE="no"
+
+# Print temperature readings
+# Log size may increase in proportion to how many disks you have
+PRINT_TEMPS="no"
+
 EXCLUDE_DISK_BY_NAME=(
     "cache_system"
     "cache_system2"
@@ -82,6 +91,11 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Sanitize variable names
+sanitize() {
+    local orig_name=$1
+    echo $orig_name | tr '-' '_'
+}
 
 # Function to check if a file exists
 check_file_exists() {
@@ -175,7 +189,7 @@ include_disk_types[Unassigned]=$INCLUDE_DISK_TYPE_UNASSIGNED
 declare -a disk_list_all
 while IFS='= ' read var val; do
     if [[ $var == \[*] ]]; then
-        disk_name=${var:2:-2}
+        disk_name=$(sanitize ${var:2:-2})
         disk_list_all+=($disk_name)
         eval declare -A ${disk_name}_data
     elif [[ $val ]]; then
@@ -187,7 +201,7 @@ done < /var/local/emhttp/disks.ini
 if [[ -f /usr/local/emhttp/state/devs.ini ]]; then
     while IFS='= ' read var val; do
         if [[ $var == \[*] ]]; then
-            disk_name=${var:2:-2}
+            disk_name=$(sanitize ${var:2:-2})
             disk_list_all+=($disk_name)
             eval declare -A ${disk_name}_data
             eval ${disk_name}_data[type]="Unassigned"
@@ -203,12 +217,15 @@ for disk in "${disk_list_all[@]}"; do
     disk_name=${disk}_data[name]
     disk_type=${disk}_data[type]
     disk_id=${disk}_data[id]
+    [[ $VERBOSE == "yes" ]] && echo "Found disk '${!disk_name}' of type '${!disk_type}'"
     disk_type_filter=${include_disk_types[${!disk_type}]}
 
     if [[ ! -z "${!disk_id}" ]] && \
        [[ "${disk_type_filter}" -ne 0 ]] && \
        [[ ! " ${EXCLUDE_DISK_BY_NAME[*]} " =~ " ${disk} " ]]; then
         disk_list+=($disk)
+    else
+        [[ $VERBOSE == "yes" ]] && echo "Excluding disk '${!disk_name}'"
     fi
 done
 
@@ -223,14 +240,17 @@ for disk in "${disk_list[@]}"
 do
     # Check disk state
     eval state_value=${disk}_data[spundown]
+    eval disk_name=${disk}_data[name]
     if (( ${state_value} == 1 ))
     then
         state=spundown
         disk_state[${disk}]=spundown
+        [[ $VERBOSE == "yes" || $PRINT_TEMPS == "yes" ]] && echo "Disk '${!disk_name}' is spun down"
     else
         state=spunup
         disk_state[${disk}]=spunup
         disk_active_num=$((disk_active_num+1))
+        [[ $VERBOSE == "yes" ]] && echo "Disk '${!disk_name}' is active"
     fi
 
     # Check disk temperature
@@ -240,6 +260,7 @@ do
         if [[ "${!temp}" =~ ^[0-9]+$ ]]
         then
             disk_temp[${disk}]=${!temp}
+            [[ $VERBOSE == "yes" || $PRINT_TEMPS == "yes" ]] && echo "Temperature reading for '${!disk_name}': ${!temp}ºC"
             if (( "${!temp}" > "$disk_max_temp_value" ))
             then
                 disk_max_temp_value=${!temp}

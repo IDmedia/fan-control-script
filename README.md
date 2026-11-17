@@ -1,15 +1,13 @@
+<div align="center">
+  <img src="extras/logo.png" width="250" alt="logo">
+</div>
+
 > [!WARNING]
 > **This repository is deprecated and no longer maintained.**
 >
 > It has been replaced by **[PWM Fan Control](https://github.com/IDmedia/pwm-fan-control)**, a proper Unraid plugin that offers more features and is much easier to configure.
 >
-> Please migrate to the new plugin—all future updates, bug fixes, and feature requests will be handled there.
-
-
-<div align="center">
-  <img src="extras/logo.png" width="250" alt="logo">
-</div>
-
+> Please migrate to the new plugin. All future updates, bug fixes, and feature requests will be handled there.
 
 # Unraid Fan Control Script
 This Bash script enables automatic adjustment of fan speed in Unraid based on the temperature of your hard drives in the array. You can customize the disks to include or exclude, as well as adjust temperature settings for different fan control scenarios.

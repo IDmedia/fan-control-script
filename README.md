@@ -1,3 +1,11 @@
+> [!WARNING]
+> **This repository is deprecated and no longer maintained.**
+>
+> It has been replaced by **[PWM Fan Control](https://github.com/IDmedia/pwm-fan-control)**, a proper Unraid plugin that offers more features and is much easier to configure.
+>
+> Please migrate to the new plugin—all future updates, bug fixes, and feature requests will be handled there.
+
+
 <div align="center">
   <img src="extras/logo.png" width="250" alt="logo">
 </div>
